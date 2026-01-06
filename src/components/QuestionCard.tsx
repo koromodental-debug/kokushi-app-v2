@@ -3,19 +3,47 @@
 import type { Question } from '../types/question';
 import { useStore } from '../store/useStore';
 import { isHisshu } from '../services/questionService';
+import { useState } from 'react';
 
 interface Props {
   question: Question;
 }
 
+// 画像パスを生成（複数画像対応）
+function getImagePaths(question: Question): string[] {
+  if (!question.hasFigure) return [];
+
+  const basePath = import.meta.env.BASE_URL || '/';
+  const folder = `${question.year}回_Web画像`;
+  const baseId = question.id;
+
+  // 複数画像の可能性があるので、_1, _2, _3 のパターンも含める
+  const paths: string[] = [];
+
+  // メイン画像
+  paths.push(`${basePath}images/${folder}/${baseId}.png`);
+
+  // 複数画像（_1, _2, _3...）
+  for (let i = 1; i <= 5; i++) {
+    paths.push(`${basePath}images/${folder}/${baseId}_${i}.png`);
+  }
+
+  return paths;
+}
+
 export function QuestionCard({ question }: Props) {
   const { selectQuestion, selectedQuestion, showAnswer } = useStore();
   const isSelected = selectedQuestion?.id === question.id;
+  const [loadedImages, setLoadedImages] = useState<string[]>([]);
+  const [checkedImages, setCheckedImages] = useState<Set<string>>(new Set());
 
   // タグ判定
   const hisshu = isHisshu(question.year, question.session, question.number);
   const hasImage = question.hasFigure || question.images.length > 0;
   const category = question.category || null;
+
+  // 画像パスを取得
+  const imagePaths = question.images.length > 0 ? question.images : getImagePaths(question);
 
   return (
     <button
@@ -112,14 +140,25 @@ export function QuestionCard({ question }: Props) {
           </div>
 
           {/* 画像（あれば） */}
-          {question.images.length > 0 && (
+          {hasImage && imagePaths.length > 0 && (
             <div className="mt-4 flex gap-2 overflow-x-auto">
-              {question.images.map((src, idx) => (
+              {imagePaths.map((src, idx) => (
                 <img
                   key={idx}
                   src={src}
                   alt={`図${idx + 1}`}
-                  className="h-32 rounded-lg border border-gray-200 object-cover"
+                  className={`h-32 rounded-lg border border-gray-200 object-cover ${
+                    checkedImages.has(src) && !loadedImages.includes(src) ? 'hidden' : ''
+                  }`}
+                  onLoad={() => {
+                    if (!loadedImages.includes(src)) {
+                      setLoadedImages(prev => [...prev, src]);
+                    }
+                    setCheckedImages(prev => new Set(prev).add(src));
+                  }}
+                  onError={() => {
+                    setCheckedImages(prev => new Set(prev).add(src));
+                  }}
                 />
               ))}
             </div>
