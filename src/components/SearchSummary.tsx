@@ -1,10 +1,14 @@
 // 検索サマリー（モック準拠）
 
 import { useStore } from '../store/useStore';
-import { useMemo } from 'react';
+import { useMemo, useState, useRef } from 'react';
 
 export function SearchSummary() {
-  const { filter, filteredQuestions } = useStore();
+  const { filter, filteredQuestions, setSearchText } = useStore();
+  const [isDismissing, setIsDismissing] = useState(false);
+  const [translateY, setTranslateY] = useState(0);
+  const touchStartY = useRef(0);
+  const touchStartTime = useRef(0);
 
   // 直近5回（118-114回）の出題数を計算
   const recentYears = [118, 117, 116, 115, 114];
@@ -16,10 +20,50 @@ export function SearchSummary() {
   // 仮で固定値を表示
   const topCategories = ['診断・検査', '治療'];
 
+  // スワイプ開始
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchStartTime.current = Date.now();
+  };
+
+  // スワイプ中
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const deltaY = e.touches[0].clientY - touchStartY.current;
+    // 上方向のスワイプのみ反応（負の値）
+    if (deltaY < 0) {
+      setTranslateY(deltaY);
+    }
+  };
+
+  // スワイプ終了
+  const handleTouchEnd = () => {
+    const swipeDistance = Math.abs(translateY);
+    const swipeTime = Date.now() - touchStartTime.current;
+    const swipeVelocity = swipeDistance / swipeTime;
+
+    // 50px以上スワイプ or 素早いスワイプで消去
+    if (swipeDistance > 50 || swipeVelocity > 0.5) {
+      setIsDismissing(true);
+      setTimeout(() => {
+        setSearchText('');
+        setIsDismissing(false);
+        setTranslateY(0);
+      }, 200);
+    } else {
+      setTranslateY(0);
+    }
+  };
+
   if (!filter.searchText) return null;
 
   return (
-    <div className="bg-white mx-4 mt-4 rounded-2xl p-4 shadow-sm border border-gray-100">
+    <div
+      className={`bg-white mx-4 mt-4 rounded-2xl p-4 shadow-sm border border-gray-100 transition-all ${isDismissing ? 'opacity-0 -translate-y-full' : ''}`}
+      style={{ transform: isDismissing ? undefined : `translateY(${translateY}px)`, opacity: isDismissing ? 0 : 1 - Math.abs(translateY) / 150 }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* キーワード見出し */}
       <h2 className="text-xl font-bold text-gray-900 mb-1">
         {filter.searchText}
