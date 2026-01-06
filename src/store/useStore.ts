@@ -18,6 +18,7 @@ interface AppState {
   selectedQuestion: Question | null;
   showAnswer: boolean;
   isFilterOpen: boolean;
+  isScrolled: boolean;
 
   // アクション
   setSearchText: (text: string) => void;
@@ -37,6 +38,7 @@ interface AppState {
   applyFilter: () => void;
   resetFilter: () => void;
   restoreSelectedQuestion: () => void;
+  setIsScrolled: (value: boolean) => void;
 }
 
 const [minYear, maxYear] = getYearRange();
@@ -73,6 +75,7 @@ export const useStore = create<AppState>()(
       selectedQuestion: null,
       showAnswer: false,
       isFilterOpen: false,
+      isScrolled: false,
 
       // アクション
       setSearchText: (text) => {
@@ -229,6 +232,11 @@ export const useStore = create<AppState>()(
             set({ selectedQuestion: question });
           }
         }
+      },
+
+      // スクロール状態の更新
+      setIsScrolled: (value) => {
+        set({ isScrolled: value });
       },
     }),
     {

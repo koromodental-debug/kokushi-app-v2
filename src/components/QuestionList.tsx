@@ -1,6 +1,7 @@
 // 問題リスト（仮想スクロール対応 - react-window 2.x）
 
 import type { CSSProperties, ReactElement } from 'react';
+import { useRef, useCallback } from 'react';
 import { List, useDynamicRowHeight, useListRef } from 'react-window';
 import { useStore } from '../store/useStore';
 import { QuestionCard } from './QuestionCard';
@@ -8,6 +9,7 @@ import type { Question } from '../types/question';
 
 // 行の高さ定義
 const ROW_HEIGHT_COLLAPSED = 100; // 非選択時
+const SCROLL_THRESHOLD = 50; // この値以上スクロールしたら検索サマリーを隠す
 
 interface RowProps {
   questions: Question[];
@@ -35,13 +37,23 @@ function Row({
 }
 
 export function QuestionList() {
-  const { filteredQuestions, selectedQuestion } = useStore();
+  const { filteredQuestions, selectedQuestion, isScrolled, setIsScrolled } = useStore();
   const listRef = useListRef(null);
+  const lastScrollTop = useRef(0);
 
   const dynamicRowHeight = useDynamicRowHeight({
     defaultRowHeight: ROW_HEIGHT_COLLAPSED,
     key: selectedQuestion?.id ?? 'none',
   });
+
+  // スクロール検出
+  const handleScroll = useCallback((scrollTop: number) => {
+    const shouldHide = scrollTop > SCROLL_THRESHOLD;
+    if (shouldHide !== isScrolled) {
+      setIsScrolled(shouldHide);
+    }
+    lastScrollTop.current = scrollTop;
+  }, [isScrolled, setIsScrolled]);
 
   if (filteredQuestions.length === 0) {
     return (
@@ -79,6 +91,7 @@ export function QuestionList() {
         }}
         overscanCount={5}
         style={{ height: '100%' }}
+        onScroll={(e) => handleScroll((e.target as HTMLElement).scrollTop)}
       />
     </div>
   );
