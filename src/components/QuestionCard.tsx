@@ -3,46 +3,19 @@
 import type { Question } from '../types/question';
 import { useStore } from '../store/useStore';
 import { isHisshu } from '../services/questionService';
-import { useState } from 'react';
 
 interface Props {
   question: Question;
 }
 
-// 画像パスを生成（複数画像対応）
-function getImagePaths(question: Question): string[] {
-  if (!question.hasFigure) return [];
-
-  const basePath = import.meta.env.BASE_URL || '/';
-  const folder = `${question.year}回_Web画像`;
-  const baseId = question.id;
-
-  // 複数画像の可能性があるので、メイン画像と_1, _2, _3 のパターンを含める
-  const paths: string[] = [];
-
-  // メイン画像（サフィックスなし）
-  paths.push(`${basePath}images/${folder}/${baseId}.png`);
-
-  // 複数画像（_1, _2, _3...）
-  for (let i = 1; i <= 5; i++) {
-    paths.push(`${basePath}images/${folder}/${baseId}_${i}.png`);
-  }
-
-  return paths;
-}
-
 export function QuestionCard({ question }: Props) {
   const { selectQuestion, selectedQuestion, showAnswer } = useStore();
   const isSelected = selectedQuestion?.id === question.id;
-  const [loadedImages, setLoadedImages] = useState<string[]>([]);
 
   // タグ判定
   const hisshu = isHisshu(question.year, question.session, question.number);
   const hasImage = question.hasFigure || question.images.length > 0;
   const category = question.category || null;
-
-  // 画像パスを取得
-  const imagePaths = question.images.length > 0 ? question.images : getImagePaths(question);
 
   return (
     <button
@@ -139,22 +112,21 @@ export function QuestionCard({ question }: Props) {
           </div>
 
           {/* 画像（あれば） */}
-          {hasImage && imagePaths.length > 0 && (
+          {question.images.length > 0 && (
             <div className="mt-4 flex gap-2 overflow-x-auto">
-              {imagePaths.map((src, idx) => (
-                <img
-                  key={src}
-                  src={src}
-                  alt={`図${idx + 1}`}
-                  className="h-32 rounded-lg border border-gray-200 object-cover"
-                  style={{ display: loadedImages.includes(src) ? 'block' : 'none' }}
-                  onLoad={() => {
-                    setLoadedImages(prev =>
-                      prev.includes(src) ? prev : [...prev, src]
-                    );
-                  }}
-                />
-              ))}
+              {question.images.map((src, idx) => {
+                // baseパスを追加（/images/... → /kokushi-app-v2/images/...）
+                const basePath = import.meta.env.BASE_URL || '/';
+                const fullSrc = src.startsWith('/') ? `${basePath.replace(/\/$/, '')}${src}` : src;
+                return (
+                  <img
+                    key={idx}
+                    src={fullSrc}
+                    alt={`図${idx + 1}`}
+                    className="h-32 rounded-lg border border-gray-200 object-cover"
+                  />
+                );
+              })}
             </div>
           )}
 
