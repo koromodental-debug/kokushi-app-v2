@@ -17,10 +17,10 @@ function getImagePaths(question: Question): string[] {
   const folder = `${question.year}回_Web画像`;
   const baseId = question.id;
 
-  // 複数画像の可能性があるので、_1, _2, _3 のパターンも含める
+  // 複数画像の可能性があるので、メイン画像と_1, _2, _3 のパターンを含める
   const paths: string[] = [];
 
-  // メイン画像
+  // メイン画像（サフィックスなし）
   paths.push(`${basePath}images/${folder}/${baseId}.png`);
 
   // 複数画像（_1, _2, _3...）
@@ -35,7 +35,6 @@ export function QuestionCard({ question }: Props) {
   const { selectQuestion, selectedQuestion, showAnswer } = useStore();
   const isSelected = selectedQuestion?.id === question.id;
   const [loadedImages, setLoadedImages] = useState<string[]>([]);
-  const [checkedImages, setCheckedImages] = useState<Set<string>>(new Set());
 
   // タグ判定
   const hisshu = isHisshu(question.year, question.session, question.number);
@@ -144,20 +143,15 @@ export function QuestionCard({ question }: Props) {
             <div className="mt-4 flex gap-2 overflow-x-auto">
               {imagePaths.map((src, idx) => (
                 <img
-                  key={idx}
+                  key={src}
                   src={src}
                   alt={`図${idx + 1}`}
-                  className={`h-32 rounded-lg border border-gray-200 object-cover ${
-                    checkedImages.has(src) && !loadedImages.includes(src) ? 'hidden' : ''
-                  }`}
+                  className="h-32 rounded-lg border border-gray-200 object-cover"
+                  style={{ display: loadedImages.includes(src) ? 'block' : 'none' }}
                   onLoad={() => {
-                    if (!loadedImages.includes(src)) {
-                      setLoadedImages(prev => [...prev, src]);
-                    }
-                    setCheckedImages(prev => new Set(prev).add(src));
-                  }}
-                  onError={() => {
-                    setCheckedImages(prev => new Set(prev).add(src));
+                    setLoadedImages(prev =>
+                      prev.includes(src) ? prev : [...prev, src]
+                    );
                   }}
                 />
               ))}
